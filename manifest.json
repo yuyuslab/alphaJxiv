@@ -1,0 +1,33 @@
+{
+    "manifest_version": 3,
+    "name": "Side panel extension",
+    "version": "1.0",
+    "description": "Extension with a default side panel.",
+    "icons": {
+      "128": "alphaJxiv_icon.png"
+    },
+    "background": {
+        "service_worker": "service-worker.js"
+      },
+      "content_scripts": [
+        {
+          "js": [
+            "content.js"
+          ],
+          "matches": ["https://jxiv.jst.go.jp/*"]
+        }
+      ],
+    "side_panel": {
+      "default_path": "sidepanel.html"
+    },
+    "action": {
+        "default_title": "Click to open panel"
+      },
+    "permissions": ["sidePanel", "tabs"],
+    "host_permissions": [
+        "https://jxiv.jst.go.jp/*"
+      ],
+      "content_security_policy": {
+        "extension_pages": "script-src 'self'; script-src-elem 'self'; object-src 'self';"
+    }
+}
