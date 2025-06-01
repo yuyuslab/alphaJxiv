@@ -6,34 +6,59 @@
     chrome.runtime.onMessage.addListener(handleChromeMessages);
 
     function handleChromeMessages(message, sender, sendResponse) {
-      // Extensions may have an number of other reasons to send messages, so you
-      // should filter out any that are not meant for the offscreen document.
       if (message.target !== 'offscreen') {
         return false;
       }
 
-      function handleIframeMessage({data}) {
-        try {
-          if (data.startsWith('!_{')) {
-            // Other parts of the Firebase library send messages using postMessage.
-            // You don't care about them in this context, so return early.
-            return;
+      // Create a response promise to handle the auth flow
+      const responsePromise = new Promise((resolve, reject) => {
+        let timeoutId;
+
+        const handleIframeMessage = ({data}) => {
+          try {
+            if (typeof data === 'string' && data.startsWith('!_{')) {
+              return; // Ignore Firebase internal messages
+            }
+            
+            const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+            globalThis.removeEventListener('message', handleIframeMessage);
+            clearTimeout(timeoutId); // Clear the timeout
+            resolve(parsedData);
+          } catch (e) {
+            console.error('Error handling iframe message:', e);
+            clearTimeout(timeoutId); // Clear the timeout
+            reject(e);
           }
-          data = JSON.parse(data);
-          self.removeEventListener('message', handleIframeMessage);
+        };
 
-          sendResponse(data);
+        globalThis.addEventListener('message', handleIframeMessage);
+        
+        // Initialize auth flow with a timeout
+        try {
+          iframe.contentWindow.postMessage({"initAuth": true}, new URL(_URL).origin);
         } catch (e) {
-          console.log(`json parse failed - ${e.message}`);
+          clearTimeout(timeoutId); // Clear the timeout
+          reject(new Error('Failed to initiate auth flow: ' + e.message));
         }
-      }
 
-      globalThis.addEventListener('message', handleIframeMessage, false);
+        // Set a timeout to prevent hanging
+        timeoutId = setTimeout(() => {
+          globalThis.removeEventListener('message', handleIframeMessage);
+          reject(new Error('Auth flow timed out'));
+        }, 30000); // 30 second timeout
+      });
 
-      // Initialize the authentication flow in the iframed document. You must set the
-      // second argument (targetOrigin) of the message in order for it to be successfully
-      // delivered.
-      iframe.contentWindow.postMessage({"initAuth": true}, new URL(_URL).origin);
-      return true;
+      // Handle the response
+      responsePromise
+        .then(data => {
+          console.log('Auth flow completed successfully');
+          sendResponse(data);
+        })
+        .catch(error => {
+          console.error('Auth flow failed:', error);
+          sendResponse({ error: error.message });
+        });
+
+      return true; // Indicates we will send a response asynchronously
     }
     
