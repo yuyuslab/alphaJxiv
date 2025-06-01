@@ -37,31 +37,29 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (sender.id === chrome.runtime.id) {
       if (message.type === "PAPER_TITLE_UPDATED") {
-
         const paperTitleElement = document.getElementById('paper_title');
         
-        console.log(paperTitleElement)
-
         if (paperTitleElement) {
           paperTitleElement.innerHTML = message.title;
           console.log("Content.js: Title updated to -", message.title);
         } else {
           console.warn("Content.js: .paper_title element not found.");
         }
+        sendResponse({ success: true }); // Add response
 
       } else if (message.type === "PAPER_TITLE_NOT_FOUND") {
-
         const paperTitleElement = document.getElementById('paper_title');
 
         if (paperTitleElement) {
-          paperTitleElement.innerHTML = ''; // Clear any previous title
+          paperTitleElement.innerHTML = '';
           console.log("Content.js: Title not found, .paper_title cleared.");
         } else {
           console.warn("Content.js: .paper_title element not found for clearing.");
         }
-
+        sendResponse({ success: true }); // Add response
       }
+      return true; // Indicate we will send a response asynchronously
     }
-    return undefined; 
+    return false; // Don't expect a response for other messages
   });
 });
