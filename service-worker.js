@@ -28,24 +28,27 @@ chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
 
     if (paperTitle) {
       // Send to content.js
-      chrome.runtime.sendMessage({
-        type: "PAPER_TITLE_UPDATED",
-        title: paperTitle
-      }).catch(e => {
+      try {
+        await chrome.tabs.sendMessage(currentTabId, {
+          type: "PAPER_TITLE_UPDATED",
+          title: paperTitle
+        });
+      } catch (e) {
         if (e.message !== "Could not establish connection. Receiving end does not exist.") {
           console.warn("Failed to send PAPER_TITLE_UPDATED to content script", e.message);
         }
-      });
-      
+      }
     } else {
       // Inform content.js if title not found
-      chrome.runtime.sendMessage({
-        type: "PAPER_TITLE_NOT_FOUND"
-      }).catch(e => {
-         if (e.message !== "Could not establish connection. Receiving end does not exist.") {
-           console.warn("Failed to send PAPER_TITLE_NOT_FOUND to content script", e.message);
-         }
-      });
+      try {
+        await chrome.tabs.sendMessage(currentTabId, {
+          type: "PAPER_TITLE_NOT_FOUND"
+        });
+      } catch (e) {
+        if (e.message !== "Could not establish connection. Receiving end does not exist.") {
+          console.warn("Failed to send PAPER_TITLE_NOT_FOUND to content script", e.message);
+        }
+      }
     }
   } else {
     delete tabTitles[currentTabId]; // Clear title for non-Jxiv sites
@@ -88,11 +91,12 @@ async function getPaperTitle(url) {
       return null;
     }
     const html = await response.text();
-    const match = html.match(/<meta name="citation_title" content="(.*?)"(?: ?\/)?>/i);
+    // Extract the <title> tag content from <head>
+    const match = html.match(/<head[^>]*>[\s\S]*?<title>(.*?)<\/title>/i);
     if (match && match[1]) {
-      return match[1]; // Return the title
+      return match[1].trim();
     } else {
-      console.log('Meta tag for citation_title not found or content is empty for:', url.href);
+      console.log('Title tag not found or content is empty for:', url.href);
       return null;
     }
   } catch (error) {
@@ -101,3 +105,80 @@ async function getPaperTitle(url) {
   }
 }
 
+    const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
+
+    // A global promise to avoid concurrency issues
+    let creatingOffscreenDocument;
+
+    // Chrome only allows for a single offscreenDocument. This is a helper function
+    // that returns a boolean indicating if a document is already active.
+    async function hasDocument() {
+      // Check all windows controlled by the service worker to see if one
+      // of them is the offscreen document with the given path
+      const matchedClients = await clients.matchAll();
+      return matchedClients.some(
+        (c) => c.url === chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH)
+      );
+    }
+
+    async function setupOffscreenDocument(path) {
+      // If we do not have a document, we are already setup and can skip
+      if (!(await hasDocument())) {
+        // create offscreen document
+        if (creatingOffscreenDocument) {
+          await creatingOffscreenDocument;
+        } else {
+          creatingOffscreenDocument = chrome.offscreen.createDocument({
+            url: path,
+            reasons: [
+                chrome.offscreen.Reason.DOM_SCRAPING
+            ],
+            justification: 'authentication'
+          });
+          await creatingOffscreenDocument;
+          creatingOffscreenDocument = null;
+        }
+      }
+    }
+
+    async function closeOffscreenDocument() {
+      if (!(await hasDocument())) {
+        return;
+      }
+      await chrome.offscreen.closeDocument();
+    }
+
+    function getAuth() {
+      return new Promise(async (resolve, reject) => {
+        const auth = await chrome.runtime.sendMessage({
+          type: 'firebase-auth',
+          target: 'offscreen'
+        });
+        auth?.name !== 'FirebaseError' ? resolve(auth) : reject(auth);
+      })
+    }
+
+    async function firebaseAuth() {
+      await setupOffscreenDocument(OFFSCREEN_DOCUMENT_PATH);
+
+      const auth = await getAuth()
+        .then((auth) => {
+          console.log('User Authenticated', auth);
+          return auth;
+        })
+        .catch(err => {
+          if (err.code === 'auth/operation-not-allowed') {
+            console.error('You must enable an OAuth provider in the Firebase' +
+                          ' console in order to use signInWithPopup. This sample' +
+                          ' uses Google by default.');
+          } else {
+            console.error(err);
+            return err;
+          }
+        })
+        .finally(closeOffscreenDocument)
+
+      return auth;
+    }
+
+firebaseAuth();
