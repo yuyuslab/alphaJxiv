@@ -8,7 +8,7 @@
 3. Google アカウント認証後に Jxiv で PDF を表示するページにてコメントができる
 ---
 # ローカル環境でこのプロジェクトを動作させる方法
-1.作業ディレクトリにて `git clone git@github.com:yuyuslab/alphaJxiv.git`
+1. 作業ディレクトリにて `git clone git@github.com:yuyuslab/alphaJxiv.git`
 2. Chrome ブラウザを開く
     - フルスクリーンだと Google アカウントの認証で出てくるウィンドウが自動で切り替わるのでオススメ
     - そうでなければ出てくる認証画面ウィンドウに手動で切り替える必要がある
