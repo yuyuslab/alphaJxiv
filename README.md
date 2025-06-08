@@ -1,6 +1,9 @@
 # alphaJxiv
 - Jxivでディスカッションできる拡張機能 (alphaXivさんのマネ)
 - 背景とか意図とか詳しくは[wiki](https://github.com/yuyuslab/alphaJxiv/wiki)にて
+
+https://github.com/user-attachments/assets/ce8f863d-774a-4456-a624-fff2825c70d9
+
 ---
 # 主な機能（06/08/2025 現在）
 1. 現状は Chrome 拡張機能である
