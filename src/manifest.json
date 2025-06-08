@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "alpha.Jxiv",
+  "version": "1.0",
+  "description": "This extension adds a side panel to the Jxiv website.",
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Click to open panel"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://jxiv.jst.go.jp/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "permissions": ["sidePanel", "offscreen", "tabs"],
+  "host_permissions": [
+    "https://jxiv.jst.go.jp/*"
+  ],
+  "icons": {
+    "128": "alphaJxiv_icon.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://jxiv.jst.go.jp https://firestore.googleapis.com;"
+  }
+}
