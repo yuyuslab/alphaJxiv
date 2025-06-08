@@ -13,12 +13,12 @@
     - フルスクリーンだと Google アカウントの認証で出てくるウィンドウが自動で切り替わるのでオススメ
     - そうでなければ出てくる認証画面ウィンドウに手動で切り替える必要がある
 3. `chrome://extensions/` のページにいく
-4 右上の "Developer mode" をオン
+4. 右上の "Developer mode" をオン
 5. "Load unpacked" より alphaJxiv の `dist` フォルダーをアップロード
 6. Jxiv でテキトウなページを開く (e.g. https://jxiv.jst.go.jp/index.php/jxiv/preprint/view/1295/3422)
 7. 拡張機能のアイコンをクリックしてサイドバーを開く
 8. "Login with Google" をクリック
-9. 認証画面のウィンドウが開くので (フルスクリーンでは新しく開いたウィンドウを探して) アカウントを選択
+9. 認証画面のウィンドウが開くので (フルスクリーンでない場合は新しく開いたウィンドウを探して) アカウントを選択
 10. Jxiv に勝手に or 手動で戻ってコメントをする
 ---
 # 問題・改善点は [Issue](https://github.com/yuyuslab/alphaJxiv/issues) にて
