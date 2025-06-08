@@ -7,17 +7,19 @@
   </head>
   <body>
     <h1>alphaJxiv</h1>
+    
     <h2 id="paper_title">Loading title...</h2>
+
+    <div id="auth_container">
+      <p id="user-status">You must be logged in to comment.</p>
+      <button id="login_button" style="display: none;">Login with Google</button>
+    </div>
     <form id="comment_form">
       <textarea id="comment_text" placeholder="Write a comment..."></textarea>
       <button type="submit">Post</button>
     </form>
+
     <div id="comments_list"></div>
-    <script src="content.js"></script>
     <script src="sidepanel.js"></script>
-    <!-- Firebase SDKs -->
-    <script defer src="vendor/firebase-app-compat.js"></script>
-    <script defer src="vendor/firebase-firestore-compat.js"></script>
-    <script defer src="firebase-config.js"></script>
   </body>
 </html>
