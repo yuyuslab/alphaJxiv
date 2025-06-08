@@ -41,35 +41,51 @@ function pushStateToUI() {
   });
 }
 
+// **MODIFIED**: This function now returns a Promise that resolves after the first data load.
 function resetFirestoreListener() {
-  if (firestoreUnsubscribe) {
-    firestoreUnsubscribe();
-    firestoreUnsubscribe = null;
-  }
-  if (state.isJxivPage && state.activeTabUrl) {
-    try {
-      const db = getDb();
-      const commentsQuery = query(collection(db, "comments"), where("pageUrl", "==", state.activeTabUrl), orderBy("timestamp", "desc"));
-      firestoreUnsubscribe = onSnapshot(commentsQuery, (snapshot) => {
-        state.comments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), timestamp: doc.data().timestamp?.toDate().toLocaleString() }));
-        pushStateToUI();
-      }, (error) => {
-        console.error("Firestore error:", error);
-        state.comments = [];
-        pushStateToUI();
-      });
-    } catch (error) {
-        console.error("Failed to initialize Firestore listener:", error);
-    }
-  } else {
-    state.comments = [];
-    pushStateToUI();
-  }
+    return new Promise((resolve) => {
+        if (firestoreUnsubscribe) {
+            firestoreUnsubscribe();
+            firestoreUnsubscribe = null;
+        }
+
+        if (state.isJxivPage && state.activeTabUrl) {
+            try {
+                const db = getDb();
+                const commentsQuery = query(collection(db, "comments"), where("pageUrl", "==", state.activeTabUrl), orderBy("timestamp", "desc"));
+                
+                let isFirstLoad = true;
+
+                firestoreUnsubscribe = onSnapshot(commentsQuery, (snapshot) => {
+                    state.comments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), timestamp: doc.data().timestamp?.toDate().toLocaleString() }));
+                    pushStateToUI(); // The listener now pushes its own updates.
+                    if (isFirstLoad) {
+                        isFirstLoad = false;
+                        resolve();
+                    }
+                }, (error) => {
+                    console.error("Firestore error:", error);
+                    state.comments = [];
+                    pushStateToUI();
+                    if (isFirstLoad) {
+                       isFirstLoad = false;
+                       resolve();
+                    }
+                });
+            } catch (error) {
+                console.error("Failed to initialize Firestore listener:", error);
+                resolve();
+            }
+        } else {
+            state.comments = [];
+            resolve();
+        }
+    });
 }
 
-// **MODIFIED**: This regex is now less strict to match more Jxiv article URLs.
 const jxivPattern = /^https:\/\/jxiv\.jst\.go\.jp\/index\.php\/jxiv\/preprint\/view\/\d+/;
 
+// **MODIFIED**: This function now actively requests the title and lets the listener push its own state.
 async function handleTabUpdate(tabId, url) {
   state.activeTabId = tabId;
   state.activeTabUrl = url;
@@ -77,15 +93,26 @@ async function handleTabUpdate(tabId, url) {
   if (url && jxivPattern.test(url)) {
     state.isJxivPage = true;
     state.paperTitle = "Loading title...";
+    pushStateToUI(); // Immediately push the "loading" state for the title
+
     await chrome.sidePanel.setOptions({ tabId, path: 'sidepanel.html', enabled: true });
+
+    // Actively request the title from the content script
+    chrome.tabs.sendMessage(tabId, { type: 'GET_TITLE' }, (response) => {
+        if (!chrome.runtime.lastError && response && response.title) {
+            state.paperTitle = response.title;
+            pushStateToUI(); // Push a second update once the real title arrives
+        }
+    });
+
   } else {
     state.isJxivPage = false;
     state.paperTitle = null;
     await chrome.sidePanel.setOptions({ tabId, enabled: false });
   }
-
-  resetFirestoreListener();
-  pushStateToUI();
+  
+  // This will set up the listener which pushes comment updates independently.
+  await resetFirestoreListener();
 }
 
 // --- 3. Browser Event Listeners ---
@@ -155,10 +182,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         firebaseAuth()
           .then(auth => {
             state.auth = auth;
-            pushStateToUI();
+            handleTabUpdate(state.activeTabId, state.activeTabUrl);
             sendResponse({ success: true, auth: auth });
           })
-          .catch(error => sendResponse({ success: false, error: error.message }));
+          .catch(error => {
+            handleTabUpdate(state.activeTabId, state.activeTabUrl);
+            sendResponse({ success: false, error: error.message })
+          });
     }
     return true;
   }

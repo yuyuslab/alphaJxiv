@@ -2,18 +2,24 @@
 /*!************************!*\
   !*** ./src/content.js ***!
   \************************/
-// src/content.js (Final Version - Replace Entire File)
+// src/content.js (Final Corrected Version)
 
-// When the content script loads, it has access to the page's DOM.
-// We send the title to the service worker to update the extension's state.
+// Send the title when the script first loads
 chrome.runtime.sendMessage({
   type: 'PAGE_TITLE',
   title: document.title
 });
 
-// The content script's job is done. The service worker will manage the state
-// and the side panel will render it. No other code is needed here for the
-// requested functionality.
+// Also, listen for requests from the service worker to send the title again
+chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+  if (message.type === 'GET_TITLE') {
+    sendResponse({
+      title: document.title
+    });
+  }
+  // Return false to not keep the message channel open unnecessarily
+  return false;
+});
 /******/ })()
 ;
 //# sourceMappingURL=content.js.map

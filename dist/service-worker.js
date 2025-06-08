@@ -27883,41 +27883,55 @@ function pushStateToUI() {
     // This error is expected if the side panel is not open, so we can ignore it.
   });
 }
-function resetFirestoreListener() {
-  if (firestoreUnsubscribe) {
-    firestoreUnsubscribe();
-    firestoreUnsubscribe = null;
-  }
-  if (state.isJxivPage && state.activeTabUrl) {
-    try {
-      var db = getDb();
-      var commentsQuery = (0,firebase_firestore__WEBPACK_IMPORTED_MODULE_1__.query)((0,firebase_firestore__WEBPACK_IMPORTED_MODULE_1__.collection)(db, "comments"), (0,firebase_firestore__WEBPACK_IMPORTED_MODULE_1__.where)("pageUrl", "==", state.activeTabUrl), (0,firebase_firestore__WEBPACK_IMPORTED_MODULE_1__.orderBy)("timestamp", "desc"));
-      firestoreUnsubscribe = (0,firebase_firestore__WEBPACK_IMPORTED_MODULE_1__.onSnapshot)(commentsQuery, function (snapshot) {
-        state.comments = snapshot.docs.map(function (doc) {
-          var _doc$data$timestamp;
-          return _objectSpread(_objectSpread({
-            id: doc.id
-          }, doc.data()), {}, {
-            timestamp: (_doc$data$timestamp = doc.data().timestamp) === null || _doc$data$timestamp === void 0 ? void 0 : _doc$data$timestamp.toDate().toLocaleString()
-          });
-        });
-        pushStateToUI();
-      }, function (error) {
-        console.error("Firestore error:", error);
-        state.comments = [];
-        pushStateToUI();
-      });
-    } catch (error) {
-      console.error("Failed to initialize Firestore listener:", error);
-    }
-  } else {
-    state.comments = [];
-    pushStateToUI();
-  }
-}
 
-// **MODIFIED**: This regex is now less strict to match more Jxiv article URLs.
+// **MODIFIED**: This function now returns a Promise that resolves after the first data load.
+function resetFirestoreListener() {
+  return new Promise(function (resolve) {
+    if (firestoreUnsubscribe) {
+      firestoreUnsubscribe();
+      firestoreUnsubscribe = null;
+    }
+    if (state.isJxivPage && state.activeTabUrl) {
+      try {
+        var db = getDb();
+        var commentsQuery = (0,firebase_firestore__WEBPACK_IMPORTED_MODULE_1__.query)((0,firebase_firestore__WEBPACK_IMPORTED_MODULE_1__.collection)(db, "comments"), (0,firebase_firestore__WEBPACK_IMPORTED_MODULE_1__.where)("pageUrl", "==", state.activeTabUrl), (0,firebase_firestore__WEBPACK_IMPORTED_MODULE_1__.orderBy)("timestamp", "desc"));
+        var isFirstLoad = true;
+        firestoreUnsubscribe = (0,firebase_firestore__WEBPACK_IMPORTED_MODULE_1__.onSnapshot)(commentsQuery, function (snapshot) {
+          state.comments = snapshot.docs.map(function (doc) {
+            var _doc$data$timestamp;
+            return _objectSpread(_objectSpread({
+              id: doc.id
+            }, doc.data()), {}, {
+              timestamp: (_doc$data$timestamp = doc.data().timestamp) === null || _doc$data$timestamp === void 0 ? void 0 : _doc$data$timestamp.toDate().toLocaleString()
+            });
+          });
+          pushStateToUI(); // The listener now pushes its own updates.
+          if (isFirstLoad) {
+            isFirstLoad = false;
+            resolve();
+          }
+        }, function (error) {
+          console.error("Firestore error:", error);
+          state.comments = [];
+          pushStateToUI();
+          if (isFirstLoad) {
+            isFirstLoad = false;
+            resolve();
+          }
+        });
+      } catch (error) {
+        console.error("Failed to initialize Firestore listener:", error);
+        resolve();
+      }
+    } else {
+      state.comments = [];
+      resolve();
+    }
+  });
+}
 var jxivPattern = /^https:\/\/jxiv\.jst\.go\.jp\/index\.php\/jxiv\/preprint\/view\/\d+/;
+
+// **MODIFIED**: This function now actively requests the title and lets the listener push its own state.
 function handleTabUpdate(_x, _x2) {
   return _handleTabUpdate.apply(this, arguments);
 } // --- 3. Browser Event Listeners ---
@@ -27934,6 +27948,7 @@ function _handleTabUpdate() {
           }
           state.isJxivPage = true;
           state.paperTitle = "Loading title...";
+          pushStateToUI(); // Immediately push the "loading" state for the title
           _context.n = 1;
           return chrome.sidePanel.setOptions({
             tabId: tabId,
@@ -27941,6 +27956,15 @@ function _handleTabUpdate() {
             enabled: true
           });
         case 1:
+          // Actively request the title from the content script
+          chrome.tabs.sendMessage(tabId, {
+            type: 'GET_TITLE'
+          }, function (response) {
+            if (!chrome.runtime.lastError && response && response.title) {
+              state.paperTitle = response.title;
+              pushStateToUI(); // Push a second update once the real title arrives
+            }
+          });
           _context.n = 3;
           break;
         case 2:
@@ -27952,8 +27976,8 @@ function _handleTabUpdate() {
             enabled: false
           });
         case 3:
-          resetFirestoreListener();
-          pushStateToUI();
+          _context.n = 4;
+          return resetFirestoreListener();
         case 4:
           return _context.a(2);
       }
@@ -28045,13 +28069,14 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     } else {
       firebaseAuth().then(function (auth) {
         state.auth = auth;
-        pushStateToUI();
+        handleTabUpdate(state.activeTabId, state.activeTabUrl);
         sendResponse({
           success: true,
           auth: auth
         });
       })["catch"](function (error) {
-        return sendResponse({
+        handleTabUpdate(state.activeTabId, state.activeTabUrl);
+        sendResponse({
           success: false,
           error: error.message
         });

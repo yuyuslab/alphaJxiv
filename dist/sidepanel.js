@@ -112,8 +112,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   }
-
-  // **ADDED**: Event listener for the new login button
   var loginButton = document.getElementById('login_button');
   if (loginButton) {
     loginButton.addEventListener('click', function () {

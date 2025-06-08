@@ -95,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // **ADDED**: Event listener for the new login button
   const loginButton = document.getElementById('login_button');
   if (loginButton) {
     loginButton.addEventListener('click', () => {
