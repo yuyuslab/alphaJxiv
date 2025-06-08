@@ -4,12 +4,11 @@
 
 https://github.com/user-attachments/assets/ce8f863d-774a-4456-a624-fff2825c70d9
 
----
 # 主な機能（06/08/2025 現在）
 1. 現状は Chrome 拡張機能である
 2. [Jxiv](https://jxiv.jst.go.jp/index.php/jxiv)の PDF の隣にサイドバーを設ける
 3. Google アカウント認証後に Jxiv で PDF を表示するページにてコメントができる
----
+
 # ローカル環境でこのプロジェクトを動作させる方法
 1. 作業ディレクトリにて `git clone git@github.com:yuyuslab/alphaJxiv.git`
 2. Chrome ブラウザを開く
@@ -23,6 +22,7 @@ https://github.com/user-attachments/assets/ce8f863d-774a-4456-a624-fff2825c70d9
 8. "Login with Google" をクリック
 9. 認証画面のウィンドウが開くので (フルスクリーンでない場合は新しく開いたウィンドウを探して) アカウントを選択
 10. Jxiv に勝手に or 手動で戻ってコメントをする
----
+11. ちなみに，`src` デェレクトリのファイルを編集したら動作確認前に `npm run build` をお忘れずに
+
 # 問題・改善点は [Issue](https://github.com/yuyuslab/alphaJxiv/issues) にて
 このプロジェクトは Firebase の無料枠でやっており，プロジェクトに支払いアカウントは紐づいておりません
