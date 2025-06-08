@@ -1,5 +1,3 @@
-// src/service-worker.js (Final Corrected Version)
-
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -41,7 +39,6 @@ function pushStateToUI() {
   });
 }
 
-// **MODIFIED**: This function now returns a Promise that resolves after the first data load.
 function resetFirestoreListener() {
     return new Promise((resolve) => {
         if (firestoreUnsubscribe) {
@@ -85,7 +82,6 @@ function resetFirestoreListener() {
 
 const jxivPattern = /^https:\/\/jxiv\.jst\.go\.jp\/index\.php\/jxiv\/preprint\/view\/\d+/;
 
-// **MODIFIED**: This function now actively requests the title and lets the listener push its own state.
 async function handleTabUpdate(tabId, url) {
   state.activeTabId = tabId;
   state.activeTabUrl = url;

@@ -1,11 +1,27 @@
-// src/sidepanel.js (Final Version - Replace Entire File)
-
 // --- 1. UI Rendering Functions ---
 function renderTitle(title) {
   const titleEl = document.getElementById('paper_title');
   if (titleEl) {
     titleEl.textContent = title || 'Loading title...';
   }
+}
+
+function generateUsername(email) {
+  // Create a simple hash of the email
+  let hash = 0;
+  for (let i = 0; i < email.length; i++) {
+    hash = ((hash << 5) - hash) + email.charCodeAt(i);
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Use the hash to generate a username with an adjective and a noun
+  const adjectives = ['Quick', 'Clever', 'Happy', 'Bright', 'Smart', 'Kind', 'Cool'];
+  const nouns = ['Reader', 'Scholar', 'Thinker', 'Student', 'Researcher', 'Scientist'];
+  
+  const adjIndex = Math.abs(hash) % adjectives.length;
+  const nounIndex = Math.abs(hash >> 4) % nouns.length;
+  
+  return `${adjectives[adjIndex]}${nouns[nounIndex]}`;
 }
 
 function renderComments(comments) {
@@ -19,14 +35,14 @@ function renderComments(comments) {
   for (const comment of comments) {
     const div = document.createElement('div');
     div.className = 'comment';
-    // Display the author's email along with the comment
-    const authorHTML = comment.author ? `<strong class="author">${escapeHTML(comment.author)}</strong>` : '';
+    // Generate consistent but anonymous username
+    const username = comment.author ? generateUsername(comment.author) : 'Anonymous';
+    const authorHTML = `<strong class="author">${escapeHTML(username)}</strong>`;
     div.innerHTML = `${authorHTML}<p>${escapeHTML(comment.text)}</p><span class="timestamp">${escapeHTML(comment.timestamp)}</span>`;
     commentsList.prepend(div);
   }
 }
 
-// **MODIFIED**: This function now controls the login button's visibility
 function renderAuth(auth) {
   const authEl = document.getElementById('user-status');
   const loginBtn = document.getElementById('login_button');
